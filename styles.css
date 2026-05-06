@@ -444,6 +444,28 @@ a {
   gap: 0.8rem;
 }
 
+.social-card {
+  display: grid;
+  gap: 0.45rem;
+  padding: 1.1rem 1.25rem;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 2rem;
+  backdrop-filter: blur(16px);
+  box-shadow: 0 12px 40px rgba(48, 38, 27, 0.05);
+}
+
+.social-card strong {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.social-card span {
+  color: var(--muted);
+  line-height: 1.65;
+  font-size: 0.94rem;
+}
+
 .x-embed {
   min-height: 12rem;
   padding: 1rem;
