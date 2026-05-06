@@ -108,9 +108,24 @@ const formatDate = (value) => {
   return value;
 };
 
+const isJapanesePaper = (paper) =>
+  Array.isArray(paper.languages) && paper.languages.includes("jpn");
+
+const getPaperTitle = (paper) => {
+  if (lang === "en") {
+    return paper.paper_title?.en || paper.paper_title?.ja || ui.untitled;
+  }
+
+  if (isJapanesePaper(paper)) {
+    return paper.paper_title?.ja || paper.paper_title?.en || ui.untitled;
+  }
+
+  return paper.paper_title?.en || paper.paper_title?.ja || ui.untitled;
+};
+
 const makePaperCard = (paper) => {
   const article = document.createElement("article");
-  const title = paper.paper_title?.en || paper.paper_title?.ja || ui.untitled;
+  const title = getPaperTitle(paper);
   const authors = formatAuthors(paper.authors?.en || paper.authors?.ja);
   const journal =
     paper.publication_name?.en || paper.publication_name?.ja || ui.journalUnavailable;
