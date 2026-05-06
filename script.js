@@ -17,9 +17,6 @@ const ui = {
     peerReviewed: "Peer reviewed",
     publicRecord: "Public record",
     viewOnResearchmap: "researchmapで見る",
-    loadingPapers: "論文データを読み込んでいます。",
-    loadedPapers: (total, visible) =>
-      `公開論文 ${total} 件を確認しました。最新 ${visible} 件を表示しています。`,
     paperError:
       "論文データの取得に失敗しました。時間をおいて再読み込みするか、researchmap を直接ご確認ください。",
     xFallback: "この表示環境では X タイムラインを埋め込めませんでした。",
@@ -41,9 +38,6 @@ const ui = {
     peerReviewed: "Peer reviewed",
     publicRecord: "Public record",
     viewOnResearchmap: "View on researchmap",
-    loadingPapers: "Loading publication data.",
-    loadedPapers: (total, visible) =>
-      `${total} public papers found. Showing the latest ${visible}.`,
     paperError:
       "Failed to load publication data. Please reload later or check researchmap directly.",
     xFallback: "The X timeline could not be embedded in this view.",
@@ -92,7 +86,6 @@ window.addEventListener("scroll", animateBackground, { passive: true });
 animateBackground();
 
 const papersGrid = document.getElementById("papers-grid");
-const researchStatus = document.getElementById("research-status");
 const paperCount = document.querySelector("[data-count]");
 
 const formatAuthors = (authors) => {
@@ -156,7 +149,6 @@ const renderPapers = (items) => {
 
 const loadPapers = async () => {
   try {
-    researchStatus.textContent = ui.loadingPapers;
     const response = await fetch(siteConfig.researchmapApi, {
       headers: {
         Accept: "application/json",
@@ -171,14 +163,9 @@ const loadPapers = async () => {
     const items = Array.isArray(data.items) ? data.items : [];
 
     paperCount.textContent = data.total_items || items.length;
-    researchStatus.textContent = ui.loadedPapers(
-      data.total_items || items.length,
-      Math.min(items.length, siteConfig.maxPapers)
-    );
     renderPapers(items);
   } catch (error) {
-    researchStatus.textContent = ui.paperError;
-    papersGrid.innerHTML = "";
+    papersGrid.innerHTML = `<article><p>${ui.paperError}</p></article>`;
     console.error(error);
   }
 };
@@ -193,6 +180,43 @@ const researchAreasList = document.getElementById("research-areas-list");
 const careerHistoryList = document.getElementById("career-history-list");
 const fixedHeroMessage =
   "English Education, ESP, Active Learning, and Meeting Competency.";
+
+const buildProfileUrl = (path = "") => {
+  const suffix = lang === "en" ? "?lang=en" : "";
+  return `https://researchmap.jp/fujimurakeiji${path}${suffix}`;
+};
+
+const buildProxyCandidates = (url) => [
+  url,
+  `${siteConfig.profileProxyBase}${encodeURIComponent(url)}`,
+  `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`,
+];
+
+const fetchTextFromCandidates = async (candidates) => {
+  for (const candidate of candidates) {
+    try {
+      const response = await fetch(candidate);
+      if (!response.ok) continue;
+
+      const contentType = response.headers.get("content-type") || "";
+      if (contentType.includes("application/json")) {
+        const data = await response.json();
+        if (typeof data.contents === "string" && data.contents.trim()) {
+          return data.contents;
+        }
+      } else {
+        const text = await response.text();
+        if (text.trim()) {
+          return text;
+        }
+      }
+    } catch (_error) {
+      continue;
+    }
+  }
+
+  throw new Error("All profile fetch attempts failed");
+};
 
 const cleanText = (value) =>
   String(value || "")
@@ -238,6 +262,18 @@ const extractTextListFromSection = (sectionHtml) => {
     .filter(Boolean);
   return [...new Set(anchorTexts)];
 };
+
+const parseDocument = (html) => {
+  const parser = new DOMParser();
+  return parser.parseFromString(html, "text/html");
+};
+
+const extractListFromDocument = (doc) =>
+  [...new Set(
+    Array.from(doc.querySelectorAll("a.rm-cv-list-title, .rm-cv-list-title, li"))
+      .map((node) => cleanText(node.textContent || ""))
+      .filter(Boolean)
+  )];
 
 const extractResearchInterestFallback = (html) => {
   const sectionHtml = extractSectionHtml(
@@ -298,50 +334,44 @@ const buildMarketableSummary = ({ affiliation, intro, focus, interests }) => {
 };
 
 const loadProfile = async () => {
-  const sourceUrl =
-    lang === "en" ? siteConfig.researchmapProfileUrlEn : siteConfig.researchmapProfileUrlJa;
-
   try {
-    let response = await fetch(sourceUrl);
-    if (!response.ok) {
-      throw new Error(`Direct profile fetch failed: ${response.status}`);
-    }
-    const html = await response.text();
-    applyProfileHtml(html);
-  } catch (_error) {
-    try {
-      const proxyUrl = `${siteConfig.profileProxyBase}${encodeURIComponent(sourceUrl)}`;
-      const response = await fetch(proxyUrl);
-      if (!response.ok) {
-        throw new Error(`Proxy profile fetch failed: ${response.status}`);
-      }
-      const html = await response.text();
-      applyProfileHtml(html);
-    } catch (error) {
-      console.error(error);
-    }
+    const [profileHtml, interestsHtml, experienceHtml] = await Promise.all([
+      fetchTextFromCandidates(buildProxyCandidates(buildProfileUrl())),
+      fetchTextFromCandidates(buildProxyCandidates(buildProfileUrl("/research_interests"))),
+      fetchTextFromCandidates(buildProxyCandidates(buildProfileUrl("/research_experience"))),
+    ]);
+    applyProfileHtml(profileHtml, interestsHtml, experienceHtml);
+  } catch (error) {
+    console.error(error);
+    renderAutoList(researchAreasList, [], ui.areasEmpty);
+    renderAutoList(careerHistoryList, [], ui.historyEmpty);
   }
 };
 
-const applyProfileHtml = (html) => {
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(html, "text/html");
+const extractInterestEntries = (html) => {
+  const doc = parseDocument(html);
+  return extractListFromDocument(doc).slice(0, 8);
+};
+
+const extractExperienceEntries = (html) => {
+  const doc = parseDocument(html);
+  return extractListFromDocument(doc).slice(0, 8);
+};
+
+const applyProfileHtml = (html, interestsHtml, experienceHtml) => {
+  const doc = parseDocument(html);
   const descriptionRoot = doc.querySelector(".rm-cv-description");
   const paragraphs = Array.from(descriptionRoot?.querySelectorAll("p") || [])
     .map((node) => cleanText(node.textContent || ""))
     .filter(Boolean);
   const affiliation = findAffiliation(doc);
-  const interestFallback = extractResearchInterestFallback(html);
-  const areaSectionHtml = extractSectionHtml(
-    html,
-    lang === "en" ? ["Research Areas"] : ["研究分野"]
-  );
-  const historySectionHtml = extractSectionHtml(
-    html,
-    lang === "en" ? ["Research History"] : ["経歴"]
-  );
-  const researchAreas = extractTextListFromSection(areaSectionHtml).slice(0, 6);
-  const careerHistory = extractHistoryEntries(historySectionHtml);
+  const researchAreas = extractInterestEntries(interestsHtml);
+  const careerHistory = extractExperienceEntries(experienceHtml);
+  const interestFallback = researchAreas.length
+    ? lang === "en"
+      ? `${ui.interestHeading}: ${researchAreas.slice(0, 6).join(", ")} ${ui.interestTail}.`
+      : `${ui.interestHeading}: ${researchAreas.slice(0, 6).join("、")}${ui.interestTail}。`
+    : extractResearchInterestFallback(html);
   const sellableSummary = buildMarketableSummary({
     affiliation,
     intro: paragraphs[0] || "",
@@ -385,39 +415,63 @@ const renderXFallback = () => {
   `;
 };
 
-const mountXTimeline = () => {
-  if (!xTimelineRoot) return;
-  if (!window.twttr?.widgets?.createTimeline) {
-    window.setTimeout(() => {
-      if (window.twttr?.widgets?.createTimeline) {
-        mountXTimeline();
-      } else if (xTimelineRoot.children.length === 1) {
-        renderXFallback();
-      }
-    }, 1800);
-    return;
+const ensureTwitterScript = () => {
+  const existing = document.querySelector('script[src="https://platform.twitter.com/widgets.js"]');
+  if (existing) {
+    return existing;
   }
 
-  const link = xTimelineRoot.querySelector("a");
-  if (link) {
-    window.twttr.widgets.load(xTimelineRoot);
-  } else {
-    window.twttr.widgets
-      .createTimeline(
-        {
-          sourceType: "profile",
-          screenName: "KeijiFujimura",
-        },
-        xTimelineRoot,
-        {
-          theme: "light",
-          chrome: "noheader nofooter noborders transparent",
-          height: 620,
-          dnt: true,
-        }
-      )
-      .catch(renderXFallback);
-  }
+  const script = document.createElement("script");
+  script.src = "https://platform.twitter.com/widgets.js";
+  script.async = true;
+  script.charset = "utf-8";
+  document.body.appendChild(script);
+  return script;
+};
+
+const createTimeline = () => {
+  if (!xTimelineRoot || !window.twttr?.widgets?.createTimeline) return false;
+  xTimelineRoot.innerHTML = "";
+  window.twttr.widgets
+    .createTimeline(
+      {
+        sourceType: "profile",
+        screenName: "KeijiFujimura",
+      },
+      xTimelineRoot,
+      {
+        theme: "light",
+        chrome: "noheader nofooter noborders transparent",
+        height: 620,
+        dnt: true,
+      }
+    )
+    .then((result) => {
+      if (!result) {
+        renderXFallback();
+      }
+    })
+    .catch(renderXFallback);
+  return true;
+};
+
+const mountXTimeline = () => {
+  if (!xTimelineRoot) return;
+  ensureTwitterScript();
+
+  let attempts = 0;
+  const timer = window.setInterval(() => {
+    attempts += 1;
+    if (createTimeline()) {
+      window.clearInterval(timer);
+      return;
+    }
+
+    if (attempts >= 30) {
+      window.clearInterval(timer);
+      renderXFallback();
+    }
+  }, 500);
 };
 
 window.addEventListener("load", mountXTimeline);
