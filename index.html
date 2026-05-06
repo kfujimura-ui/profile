@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Keiji Fujimura | Profile</title>
+    <meta
+      name="description"
+      content="藤村敬次の研究・教育活動を紹介する、スクロール演出付きのミニマルなプロフィールサイト。"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:opsz,wght@6..96,500;6..96,600;6..96,700&family=Inter:wght@400;500;600;700&family=Noto+Serif+JP:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="site-shell">
+      <div class="ambient ambient-a"></div>
+      <div class="ambient ambient-b"></div>
+
+      <header class="topbar">
+        <a class="brand" href="#top">KF</a>
+        <nav class="nav">
+          <a href="#story">Story</a>
+          <a href="#services">Services</a>
+          <a href="#research">Research</a>
+          <a href="#pricing">Services</a>
+          <a href="#contact">Contact</a>
+        </nav>
+        <div class="lang-switch">
+          <a class="is-current" href="./index.html">JP</a>
+          <a href="./en.html">EN</a>
+        </div>
+      </header>
+
+      <main id="top">
+        <section class="hero section">
+          <div class="hero-copy reveal">
+            <p class="eyebrow">Researcher / Educator / Curriculum Designer</p>
+            <h1>
+              Keiji
+              <span>Fujimura</span>
+            </h1>
+            <p class="hero-lead" id="hero-summary">
+              English Education, ESP, Active Learning, and Meeting Competency.
+            </p>
+            <div class="hero-meta">
+              <span id="hero-affiliation">Associate Professor, Aichi Institute of Technology</span>
+              <span>Adjunct Lecturer, Ritsumeikan University</span>
+            </div>
+            <div class="hero-actions">
+              <a class="button button-primary" href="#research">研究を見る</a>
+              <a class="button button-secondary" href="#contact">相談する</a>
+            </div>
+          </div>
+
+          <div class="hero-visual reveal">
+            <div class="portrait-frame">
+              <img
+                src="https://researchmap.jp/fujimurakeiji/avatar.jpeg"
+                alt="藤村敬次のプロフィール写真"
+              />
+            </div>
+            <div class="hero-card floating">
+              <p>Research Interests</p>
+              <strong>ESP / CLIL / Active Learning / WTC</strong>
+            </div>
+          </div>
+        </section>
+
+        <section class="metrics section reveal">
+          <div class="metric">
+            <span class="metric-value" data-count="7">7</span>
+            <span class="metric-label">Published Papers</span>
+          </div>
+          <div class="metric">
+            <span class="metric-value">2025-</span>
+            <span class="metric-label">Ritsumeikan University</span>
+          </div>
+          <div class="metric">
+            <span class="metric-value">2022-</span>
+            <span class="metric-label">Aichi Institute of Technology</span>
+          </div>
+          <div class="metric">
+            <span class="metric-value">2019-</span>
+            <span class="metric-label">University Faculty Career</span>
+          </div>
+        </section>
+
+        <section id="story" class="story section">
+          <div class="story-media">
+            <div class="story-cover"></div>
+            <div class="story-overlay">
+              <p>From industry to academia</p>
+            </div>
+          </div>
+
+          <div class="story-content">
+            <article class="story-block reveal">
+              <p class="eyebrow">Profile</p>
+              <h2>実務と教育を横断して、学びを設計する。</h2>
+              <p id="profile-body">
+                2019年以前は民間の英語教育企業で代表取締役・執行役員を務め、
+                大企業から中小企業まで幅広い組織への ESP コンサルティングを通じて
+                グローバル人材育成に携わってきました。
+              </p>
+            </article>
+
+            <article class="story-block reveal">
+              <p class="eyebrow">Current Focus</p>
+              <h3>いまの研究テーマ</h3>
+              <p id="current-focus-body">
+                専門は ESP、アクティブ・ラーニング型カリキュラムの開発と評価。
+                MUN、OISC、PBL などの実践を通じて、
+                Meeting-Style Classroom と Willingness to Communicate を探究しています。
+                またその過程でどのような AI の使用が学習者にとって最適解かを研究しています。
+              </p>
+            </article>
+
+            <article class="story-block reveal">
+              <p class="eyebrow">Academic Roles</p>
+              <h3>教育・研究の現在地</h3>
+              <p>
+                愛知工業大学 基礎教育センター准教授を軸に、
+                2025年4月から立命館大学 生命科学部 Project-based English Program の非常勤講師も担当。
+                2022年10月から2025年3月までは東京外国語大学 GLIP でも教員を務めました。
+              </p>
+            </article>
+          </div>
+        </section>
+
+        <section class="credentials section">
+          <div class="section-heading reveal">
+            <p class="eyebrow">Profile</p>
+            <h2>研究分野と経歴</h2>
+          </div>
+
+          <div class="grid two">
+            <article class="panel reveal">
+              <h3>研究分野</h3>
+              <ul class="auto-list" id="research-areas-list">
+                <li>研究分野を読み込んでいます。</li>
+              </ul>
+            </article>
+            <article class="panel reveal">
+              <h3>主な経歴</h3>
+              <ul class="auto-list" id="career-history-list">
+                <li>経歴を読み込んでいます。</li>
+              </ul>
+            </article>
+          </div>
+        </section>
+
+        <section id="services" class="services section">
+          <div class="section-heading reveal">
+            <p class="eyebrow">Services</p>
+            <h2>教育・研究・発信を支える支援領域</h2>
+          </div>
+
+          <div class="grid three">
+            <article class="panel reveal">
+              <h3>Curriculum Design</h3>
+              <p>
+                大学英語、PBL、ESP、CLIL を組み合わせた授業設計と、
+                実践的な学修成果につながるカリキュラム開発。
+              </p>
+            </article>
+            <article class="panel reveal">
+              <h3>Workshops & Lectures</h3>
+              <p>
+                生成AI時代の英語教育、Meeting Competency、
+                アクティブ・ラーニング活用などをテーマにした講演・研修。
+              </p>
+            </article>
+            <article class="panel reveal">
+              <h3>Program Advisory</h3>
+              <p>
+                国際会議型授業、模擬国連、オンライン国際交流、
+                学内ポータルや教材設計、共同研究プロジェクトの伴走支援。
+              </p>
+            </article>
+          </div>
+        </section>
+
+        <section class="achievements section">
+          <div class="section-heading reveal">
+            <p class="eyebrow">Selected Highlights</p>
+            <h2>研究・教育実践のハイライト</h2>
+          </div>
+          <div class="timeline">
+            <div class="timeline-item reveal">
+              <span class="timeline-year">2025</span>
+              <p>
+                『基礎教育英語カリキュラムの現状と課題』を発表。
+                あわせて立命館大学で Project-based English Program を担当開始。
+              </p>
+            </div>
+            <div class="timeline-item reveal">
+              <span class="timeline-year">2024</span>
+              <p>
+                Meeting-style classroom approach に関する論文や、
+                オンライン国際会議に関する共同研究を発表。
+              </p>
+            </div>
+            <div class="timeline-item reveal">
+              <span class="timeline-year">2023</span>
+              <p>
+                MUN training におけるアクティブ・ラーニング研究を発表。
+                PBL と英語ポスター発表の実践も継続。
+              </p>
+            </div>
+            <div class="timeline-item reveal">
+              <span class="timeline-year">2019-</span>
+              <p>
+                Japan University English Model United Nations の Faculty Advisor、
+                Online International Student Conference の Cofounder / Advisor として活動。
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section id="research" class="research section">
+          <div class="section-heading reveal">
+            <p class="eyebrow">Research Updates</p>
+            <h2>最新論文</h2>
+          </div>
+
+          <div class="research-status reveal" id="research-status">
+            論文データを読み込んでいます。
+          </div>
+          <div class="papers-grid" id="papers-grid"></div>
+        </section>
+
+        <section class="social section">
+          <div class="section-heading reveal">
+            <p class="eyebrow">Social</p>
+            <h2>ソーシャルメディア</h2>
+            <p class="section-copy">
+              研究・教育活動に関する発信やプロフィールは、各種SNSと外部ページからご覧いただけます。
+            </p>
+          </div>
+
+          <div class="social-layout">
+            <div class="social-links reveal">
+              <a href="https://researchmap.jp/fujimurakeiji" target="_blank" rel="noreferrer">
+                researchmap
+              </a>
+              <a
+                href="https://jglobal.jst.go.jp/detail?JGLOBAL_ID=201901018172292110"
+                target="_blank"
+                rel="noreferrer"
+              >
+                J-GLOBAL
+              </a>
+              <a
+                href="https://scholar.google.com/citations?user=wfsfkhoAAAAJ&hl=en"
+                target="_blank"
+                rel="noreferrer"
+              >
+                Google Scholar
+              </a>
+              <a href="https://jp.linkedin.com/in/fujimurakeiji" target="_blank" rel="noreferrer">
+                LinkedIn
+              </a>
+              <a href="https://x.com/KeijiFujimura" target="_blank" rel="noreferrer">
+                X / Twitter
+              </a>
+            </div>
+
+            <div class="x-embed reveal">
+              <div id="x-timeline" class="x-timeline-shell">
+                <a
+                  class="twitter-timeline"
+                  data-theme="light"
+                  data-chrome="noheader nofooter noborders transparent"
+                  data-height="620"
+                  data-dnt="true"
+                  href="https://twitter.com/KeijiFujimura"
+                >
+                  Posts by @KeijiFujimura
+                </a>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="pricing" class="pricing section">
+          <div class="section-heading reveal">
+            <p class="eyebrow">Services</p>
+            <h2>サービス内容</h2>
+            <p class="section-copy">
+              教育・研究・実践の接点にある取り組みを、現在このような形で展開しています。
+            </p>
+          </div>
+
+          <div class="grid three">
+            <article class="price-card reveal">
+              <h3>Lecture</h3>
+              <p>講演、ゲストセッション、FD/SD 向け登壇。</p>
+            </article>
+            <article class="price-card reveal featured">
+              <h3>Workshop</h3>
+              <p>授業改善、生成AI活用、PBL/ESP 設計の実践型ワークショップ。</p>
+            </article>
+            <article class="price-card reveal">
+              <h3>Advisory</h3>
+              <p>教材開発、カリキュラム監修、共同プロジェクトの継続支援。</p>
+            </article>
+          </div>
+        </section>
+
+        <section class="faq section">
+          <div class="section-heading reveal">
+            <p class="eyebrow">FAQ</p>
+            <h2>よくある相談</h2>
+          </div>
+
+          <div class="faq-list">
+            <details class="faq-item reveal">
+              <summary>どのようなテーマで依頼できますか？</summary>
+              <p>
+                大学英語教育、ESP、PBL、模擬国連、国際交流型授業、生成AI活用、
+                学内ポータルや教材設計などが中心です。
+              </p>
+            </details>
+            <details class="faq-item reveal">
+              <summary>単発の講演や研修にも対応できますか？</summary>
+              <p>
+                はい。単発の講演から、複数回の研修、授業改善の伴走支援まで対応できます。
+              </p>
+            </details>
+          </div>
+        </section>
+
+        <section id="contact" class="contact section">
+          <div class="section-heading reveal">
+            <p class="eyebrow">Contact</p>
+            <h2>相談・登壇・共同研究のご連絡</h2>
+            <p class="section-copy">
+              まずは簡単なフォームからご連絡いただけるようにしています。
+            </p>
+          </div>
+
+          <div class="contact-panel reveal contact-panel-stacked">
+            <p>
+              研究・教育プロジェクト、共同研究、講演、ワークショップ、授業設計支援などの相談に対応できます。
+            </p>
+            <form class="contact-form" id="contact-form">
+              <div class="form-grid">
+                <label>
+                  <span>お名前</span>
+                  <input type="text" name="name" placeholder="藤村 太郎" required />
+                </label>
+                <label>
+                  <span>メールアドレス</span>
+                  <input type="email" name="email" placeholder="name@example.com" required />
+                </label>
+              </div>
+              <label>
+                <span>件名</span>
+                <input type="text" name="subject" placeholder="共同研究のご相談" required />
+              </label>
+              <label>
+                <span>お問い合わせ内容</span>
+                <textarea
+                  name="message"
+                  rows="6"
+                  placeholder="ご相談内容を簡単にお書きください。"
+                  required
+                ></textarea>
+              </label>
+              <div class="contact-actions">
+                <button class="button button-primary" type="submit">メールを作成する</button>
+                <a
+                  class="button button-secondary"
+                  href="https://researchmap.jp/fujimurakeiji"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  researchmap へ
+                </a>
+                <a class="button button-secondary" href="https://x.com/KeijiFujimura" target="_blank" rel="noreferrer">
+                  X へ
+                </a>
+              </div>
+              <p class="form-note" id="form-note">
+                送信ボタンを押すと、入力内容をもとにメール作成画面を開きます。
+              </p>
+            </form>
+          </div>
+        </section>
+      </main>
+
+      <footer class="footer">
+        <p>Profile data based on public information from researchmap and J-GLOBAL.</p>
+      </footer>
+    </div>
+
+    <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+    <script src="./script.js"></script>
+  </body>
+</html>

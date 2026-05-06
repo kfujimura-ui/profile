@@ -1,58 +1,42 @@
-# Keiji Fujimura - Professional Portfolio
+# Fujimura Keiji Profile Site
 
-## 👨‍🎓 Overview
+Static site prepared for GitHub Pages with a custom domain.
 
-This is the professional portfolio website for **Keiji Fujimura**, an Associate Professor specializing in English education, curriculum development, and active learning methodologies.
+## Files
 
-**Website:** https://kfujimura-ui.github.io/profile/
+- `index.html`
+- `en.html`
+- `styles.css`
+- `script.js`
+- `CNAME`
+- `.nojekyll`
 
-## ✨ Features
+## GitHub Pages setup
 
-✅ **Professional Design** - Clean, minimal aesthetic inspired by mizumot.com  
-✅ **Auto-Updated Research Data** - Integrated with researchmap API  
-✅ **Contact Form** - Direct messaging capability via Formspree  
-✅ **Responsive Design** - Mobile-friendly interface  
-✅ **Social Media Links** - Connected to all professional profiles  
+1. Create a GitHub repository.
+2. Upload these files to the repository root.
+3. In GitHub, open `Settings` -> `Pages`.
+4. Set `Build and deployment` to `Deploy from a branch`.
+5. Choose branch `main` and folder `/ (root)`.
+6. Save.
+7. In the custom domain field, set `fujimurakeiji.com`.
+8. Wait for GitHub Pages to publish.
 
-## 📄 Pages
+## DNS for fujimurakeiji.com
 
-- **index.html** - Home page with profile, about section, and contact form
-- **research.html** - Publications and research achievements (auto-synced with researchmap API)
-- **README.md** - This documentation
+For the apex domain:
 
-## 🔗 Professional Links
+- `A` -> `185.199.108.153`
+- `A` -> `185.199.109.153`
+- `A` -> `185.199.110.153`
+- `A` -> `185.199.111.153`
 
-- Researchmap: https://researchmap.jp/fujimurakeiji
-- J-GLOBAL: https://jglobal.jst.go.jp/detail?JGLOBAL_ID=201901018172292110
-- LinkedIn: https://jp.linkedin.com/in/fujimurakeiji
-- Twitter/X: https://x.com/KeijiFujimura
+Recommended for `www`:
 
-## 📡 API Integration
+- `CNAME` -> `<your-github-username>.github.io`
 
-This site pulls publication data automatically from the official researchmap API:
+## Notes
 
-```
-https://api.researchmap.jp/fujimurakeiji/published_papers
-```
-
-**Note:** API data is fetched client-side when the Research page loads, ensuring always-current publication information.
-
-## 📧 Contact
-
-For inquiries, use the contact form on the home page or reach out via:
-
-- Email: kfujimura@fujimurakeiji.com
-- Twitter: @KeijiFujimura
-- LinkedIn: https://jp.linkedin.com/in/fujimurakeiji
-
-## ⚙️ Technical Stack
-
-- HTML5 / CSS3 / JavaScript (vanilla)
-- Google Fonts (Noto Sans JP, Playfair Display)
-- Formspree (contact form backend)
-- Researchmap API (publication data)
-- GitHub Pages (hosting)
-
-## 📝 License
-
-© 2026 Keiji Fujimura. All rights reserved.
+- Google Workspace manages email, but not static web hosting.
+- Website hosting is done by GitHub Pages.
+- DNS changes can take time to propagate.
