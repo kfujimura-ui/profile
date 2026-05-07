@@ -1,6 +1,12 @@
 const siteConfig = {
   researchmapApi: "https://api.researchmap.jp/fujimurakeiji/published_papers",
   maxPapers: 6,
+  maxResearchItems: {
+    papers: 3,
+    books: 2,
+    presentations: 3,
+    activities: 2,
+  },
   contactEmail: "info@fujimurakeiji.com",
   researchmapProfileUrlJa: "https://researchmap.jp/fujimurakeiji",
   researchmapProfileUrlEn: "https://researchmap.jp/fujimurakeiji?lang=en",
@@ -29,6 +35,11 @@ const ui = {
     areasEmpty: "研究分野は取得できませんでした。",
     historyLoading: "経歴を読み込んでいます。",
     historyEmpty: "経歴は取得できませんでした。",
+    booksEmpty: "書籍は取得できませんでした。",
+    presentationsEmpty: "学会発表は取得できませんでした。",
+    activitiesEmpty: "その他の活動は取得できませんでした。",
+    outputsError:
+      "研究成果データの一部を取得できませんでした。時間をおいて再読み込みするか、researchmap を直接ご確認ください。",
   },
   en: {
     authorsUnavailable: "Authors unavailable",
@@ -50,6 +61,11 @@ const ui = {
     areasEmpty: "Research areas could not be loaded.",
     historyLoading: "Loading career history.",
     historyEmpty: "Career history could not be loaded.",
+    booksEmpty: "Books could not be loaded.",
+    presentationsEmpty: "Presentations could not be loaded.",
+    activitiesEmpty: "Other activities could not be loaded.",
+    outputsError:
+      "Some publication data could not be loaded. Please reload later or check researchmap directly.",
   },
 }[lang];
 
@@ -86,7 +102,9 @@ window.addEventListener("scroll", animateBackground, { passive: true });
 animateBackground();
 
 const papersGrid = document.getElementById("papers-grid");
-const paperCount = document.querySelector("[data-count]");
+const booksList = document.getElementById("books-list");
+const presentationsList = document.getElementById("presentations-list");
+const activitiesList = document.getElementById("activities-list");
 
 const formatAuthors = (authors) => {
   if (!Array.isArray(authors) || authors.length === 0) return ui.authorsUnavailable;
@@ -142,7 +160,7 @@ const makePaperCard = (paper) => {
 
 const renderPapers = (items) => {
   papersGrid.innerHTML = "";
-  items.slice(0, siteConfig.maxPapers).forEach((paper) => {
+  items.slice(0, siteConfig.maxResearchItems.papers).forEach((paper) => {
     papersGrid.appendChild(makePaperCard(paper));
   });
 };
@@ -162,7 +180,6 @@ const loadPapers = async () => {
     const data = await response.json();
     const items = Array.isArray(data.items) ? data.items : [];
 
-    paperCount.textContent = data.total_items || items.length;
     renderPapers(items);
   } catch (error) {
     papersGrid.innerHTML = `<article><p>${ui.paperError}</p></article>`;
@@ -192,10 +209,20 @@ const buildProxyCandidates = (url) => [
   `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`,
 ];
 
+const fetchWithTimeout = async (resource, timeoutMs = 7000) => {
+  const controller = new AbortController();
+  const timer = window.setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(resource, { signal: controller.signal });
+  } finally {
+    window.clearTimeout(timer);
+  }
+};
+
 const fetchTextFromCandidates = async (candidates) => {
   for (const candidate of candidates) {
     try {
-      const response = await fetch(candidate);
+      const response = await fetchWithTimeout(candidate);
       if (!response.ok) continue;
 
       const contentType = response.headers.get("content-type") || "";
@@ -223,6 +250,47 @@ const cleanText = (value) =>
     .replace(/\s+/g, " ")
     .replace(/&nbsp;/g, " ")
     .trim();
+
+const commonNoise = [
+  "日本語 | English",
+  "Japanese | English",
+  "新規登録",
+  "ログイン",
+  "ホーム",
+  "Home",
+  "経歴",
+  "研究キーワード",
+  "研究分野",
+  "論文",
+  "Books etc",
+  "MISC",
+  "講演・口頭発表等",
+  "Works(作品等)",
+  "共同研究・競争的資金等の研究課題",
+  "Research Areas",
+  "Career History",
+  "Research Interests",
+  "Major papers",
+  "書籍等出版物",
+  "所属学協会",
+  "委員歴",
+  "学術貢献活動",
+  "社会貢献活動",
+  "カリキュラム開発",
+  "Books and Other Publications",
+  "Committee Memberships",
+  "Academic Contributions",
+  "Social Contributions",
+];
+
+const isNoiseText = (value) => {
+  const text = cleanText(value);
+  if (!text) return true;
+  if (commonNoise.includes(text)) return true;
+  if (/^(日本語|English|ホーム|Home|ログイン|新規登録)$/.test(text)) return true;
+  if (text.length <= 1) return true;
+  return false;
+};
 
 const stripTags = (value) => {
   const temp = document.createElement("div");
@@ -259,7 +327,7 @@ const extractTextListFromSection = (sectionHtml) => {
     fragment.querySelectorAll("a.rm-cv-list-title, .rm-cv-list-title, li")
   )
     .map((node) => cleanText(node.textContent || ""))
-    .filter(Boolean);
+    .filter((text) => text && !isNoiseText(text));
   return [...new Set(anchorTexts)];
 };
 
@@ -268,12 +336,49 @@ const parseDocument = (html) => {
   return parser.parseFromString(html, "text/html");
 };
 
-const extractListFromDocument = (doc) =>
-  [...new Set(
-    Array.from(doc.querySelectorAll("a.rm-cv-list-title, .rm-cv-list-title, li"))
-      .map((node) => cleanText(node.textContent || ""))
-      .filter(Boolean)
-  )];
+const pickContentRoot = (doc) => {
+  const selectors = [
+    "main .rm-cv-main",
+    "main .rm-cv-content",
+    "main .rm-cv-page",
+    "main .container",
+    "main",
+    ".rm-cv-main",
+    ".rm-cv-content",
+    ".rm-cv-page",
+    "#content",
+    "body",
+  ];
+
+  for (const selector of selectors) {
+    const node = doc.querySelector(selector);
+    if (node) return node;
+  }
+
+  return doc.body;
+};
+
+const extractListFromDocument = (doc) => {
+  const root = pickContentRoot(doc);
+  const selectors = [
+    "a.rm-cv-list-title",
+    ".rm-cv-list-title",
+    ".rm-cv-item-title",
+    ".rm-cv-title",
+    ".rm-cv-list-item-title",
+    ".research-interests li",
+    ".research-experience li",
+    ".rm-cv-list li",
+    ".rm-cv-item li",
+    "section li",
+  ];
+
+  const values = Array.from(root.querySelectorAll(selectors.join(",")))
+    .map((node) => cleanText(node.textContent || ""))
+    .filter((text) => !isNoiseText(text));
+
+  return [...new Set(values)];
+};
 
 const extractResearchInterestFallback = (html) => {
   const sectionHtml = extractSectionHtml(
@@ -306,6 +411,69 @@ const renderAutoList = (element, items, emptyText) => {
   });
 };
 
+const renderOutputCards = (element, items, emptyText) => {
+  if (!element) return;
+  element.innerHTML = "";
+
+  if (!items.length) {
+    const card = document.createElement("article");
+    card.className = "output-card";
+    card.innerHTML = `<p>${emptyText}</p>`;
+    element.appendChild(card);
+    return;
+  }
+
+  items.forEach((item) => {
+    const card = document.createElement("article");
+    card.className = "output-card reveal";
+    const meta = item.meta ? `<p>${item.meta}</p>` : "";
+    const link = item.url
+      ? `<p><a href="${item.url}" target="_blank" rel="noreferrer">${ui.viewOnResearchmap}</a></p>`
+      : "";
+    card.innerHTML = `
+      <h3>${item.title}</h3>
+      ${meta}
+      ${link}
+    `;
+    element.appendChild(card);
+    observer.observe(card);
+  });
+};
+
+const summarizeAreas = (items) => {
+  const values = items.filter(Boolean).slice(0, 8);
+  if (!values.length) return [];
+
+  if (lang === "en") {
+    if (values.length <= 3) return values;
+    return [
+      `Core areas: ${values.slice(0, 3).join(", ")}`,
+      `Related themes: ${values.slice(3, 6).join(", ")}`,
+    ].filter(Boolean);
+  }
+
+  if (values.length <= 3) return values;
+  return [
+    `主な領域: ${values.slice(0, 3).join("・")}`,
+    `関連テーマ: ${values.slice(3, 6).join("・")}`,
+  ].filter(Boolean);
+};
+
+const summarizeHistory = (items) => {
+  const values = items.filter(Boolean).slice(0, 6);
+  if (!values.length) return [];
+
+  if (lang === "en") {
+    return values.slice(0, 4).map((value) =>
+      value.length > 110 ? `${value.slice(0, 107).trim()}...` : value
+    );
+  }
+
+  return values.slice(0, 4).map((value) =>
+    value.length > 64 ? `${value.slice(0, 61).trim()}...` : value
+  );
+};
+
 const extractHistoryEntries = (sectionHtml) => {
   if (!sectionHtml) return [];
   const fragment = document.createElement("div");
@@ -333,14 +501,174 @@ const buildMarketableSummary = ({ affiliation, intro, focus, interests }) => {
   return `${affiliationPart}${interestPart}大学英語教育、カリキュラム設計、グローバル人材育成をつなぐ研究者・実践者。${focus || intro}`;
 };
 
+const getAreaSectionTitles = () =>
+  lang === "en"
+    ? ["Research Interests", "Research Areas"]
+    : ["研究キーワード", "研究分野"];
+
+const getHistorySectionTitles = () =>
+  lang === "en" ? ["Research History", "Career"] : ["経歴", "研究経歴"];
+
+const getBooksSectionTitles = () =>
+  lang === "en"
+    ? ["Books and Other Publications", "Books"]
+    : ["Books and Other Publications", "書籍等出版物", "書籍"];
+
+const getPresentationsSectionTitles = () =>
+  lang === "en"
+    ? ["Presentations", "Oral presentations"]
+    : ["講演・口頭発表等", "Presentations"];
+
+const getActivitiesSectionTitles = () =>
+  lang === "en"
+    ? ["Misc", "MISC", "Other Activities"]
+    : ["MISC", "Misc", "その他の活動"];
+
+const findItemBlocks = (root) => {
+  const selectors = [
+    ".rm-cv-list-item",
+    ".rm-cv-item",
+    "li.rm-cv-list-item",
+    ".researchmap-record",
+    "article",
+    "li",
+  ];
+
+  for (const selector of selectors) {
+    const nodes = Array.from(root.querySelectorAll(selector)).filter((node) => {
+      const titleNode = node.querySelector(
+        "a.rm-cv-list-title, .rm-cv-list-title, .rm-cv-item-title, .rm-cv-title"
+      );
+      return Boolean(titleNode);
+    });
+    if (nodes.length) return nodes;
+  }
+
+  return [];
+};
+
+const extractOutputEntries = (html, maxItems) => {
+  const doc = parseDocument(html);
+  const root = pickContentRoot(doc);
+  const blocks = findItemBlocks(root);
+
+  const items = blocks
+    .map((block) => {
+      const titleNode =
+        block.querySelector("a.rm-cv-list-title") ||
+        block.querySelector(".rm-cv-list-title") ||
+        block.querySelector(".rm-cv-item-title") ||
+        block.querySelector(".rm-cv-title");
+      const title = cleanText(titleNode?.textContent || "");
+      if (isNoiseText(title)) return null;
+
+      const linkNode = titleNode?.closest("a") || titleNode;
+      const href = linkNode?.getAttribute?.("href") || "";
+      const url = href
+        ? href.startsWith("http")
+          ? href
+          : `https://researchmap.jp${href}`
+        : buildProfileUrl();
+
+      const metaCandidates = Array.from(
+        block.querySelectorAll("time, .rm-cv-list-subtitle, .rm-cv-subtitle, .rm-cv-list-description, p")
+      )
+        .map((node) => cleanText(node.textContent || ""))
+        .filter((text) => text && text !== title && !isNoiseText(text));
+
+      const meta = metaCandidates[0] || "";
+      return { title, meta, url };
+    })
+    .filter(Boolean);
+
+  return items.slice(0, maxItems);
+};
+
+const extractOutputEntriesFromSection = (sectionHtml, maxItems, fallbackUrl) => {
+  if (!sectionHtml) return [];
+
+  const fragment = document.createElement("div");
+  fragment.innerHTML = sectionHtml;
+  const blocks = Array.from(fragment.querySelectorAll(".rm-cv-list-item, .rm-cv-item, li, article"));
+
+  const items = blocks
+    .map((block) => {
+      const titleNode =
+        block.querySelector("a.rm-cv-list-title") ||
+        block.querySelector(".rm-cv-list-title") ||
+        block.querySelector(".rm-cv-item-title") ||
+        block.querySelector(".rm-cv-title") ||
+        block.querySelector("a") ||
+        block;
+
+      const title = cleanText(titleNode?.textContent || "");
+      if (!title || isNoiseText(title)) return null;
+
+      const href = titleNode?.getAttribute?.("href") || "";
+      const url = href
+        ? href.startsWith("http")
+          ? href
+          : `https://researchmap.jp${href}`
+        : fallbackUrl;
+
+      const metaCandidates = Array.from(block.querySelectorAll("time, p, span, div"))
+        .map((node) => cleanText(node.textContent || ""))
+        .filter((text) => text && text !== title && !isNoiseText(text));
+
+      return {
+        title,
+        meta: metaCandidates[0] || "",
+        url,
+      };
+    })
+    .filter(Boolean);
+
+  return items.slice(0, maxItems);
+};
+
+const loadResearchOutputs = async () => {
+  try {
+    const profileHtml = await fetchTextFromCandidates(buildProxyCandidates(buildProfileUrl()));
+
+    renderOutputCards(
+      booksList,
+      extractOutputEntriesFromSection(
+        extractSectionHtml(profileHtml, getBooksSectionTitles()),
+        siteConfig.maxResearchItems.books,
+        buildProfileUrl("/books_etc")
+      ),
+      ui.booksEmpty
+    );
+    renderOutputCards(
+      presentationsList,
+      extractOutputEntriesFromSection(
+        extractSectionHtml(profileHtml, getPresentationsSectionTitles()),
+        siteConfig.maxResearchItems.presentations,
+        buildProfileUrl("/presentations")
+      ),
+      ui.presentationsEmpty
+    );
+    renderOutputCards(
+      activitiesList,
+      extractOutputEntriesFromSection(
+        extractSectionHtml(profileHtml, getActivitiesSectionTitles()),
+        siteConfig.maxResearchItems.activities,
+        buildProfileUrl("/misc")
+      ),
+      ui.activitiesEmpty
+    );
+  } catch (error) {
+    console.error(error);
+    renderOutputCards(booksList, [], ui.booksEmpty);
+    renderOutputCards(presentationsList, [], ui.presentationsEmpty);
+    renderOutputCards(activitiesList, [], ui.activitiesEmpty);
+  }
+};
+
 const loadProfile = async () => {
   try {
-    const [profileHtml, interestsHtml, experienceHtml] = await Promise.all([
-      fetchTextFromCandidates(buildProxyCandidates(buildProfileUrl())),
-      fetchTextFromCandidates(buildProxyCandidates(buildProfileUrl("/research_interests"))),
-      fetchTextFromCandidates(buildProxyCandidates(buildProfileUrl("/research_experience"))),
-    ]);
-    applyProfileHtml(profileHtml, interestsHtml, experienceHtml);
+    const profileHtml = await fetchTextFromCandidates(buildProxyCandidates(buildProfileUrl()));
+    applyProfileHtml(profileHtml);
   } catch (error) {
     console.error(error);
     renderAutoList(researchAreasList, [], ui.areasEmpty);
@@ -348,25 +676,24 @@ const loadProfile = async () => {
   }
 };
 
-const extractInterestEntries = (html) => {
-  const doc = parseDocument(html);
-  return extractListFromDocument(doc).slice(0, 8);
+const extractEntriesFromProfileSections = (html, sectionTitles) => {
+  const entries = sectionTitles.flatMap((title) =>
+    extractTextListFromSection(extractSectionHtml(html, [title]))
+  );
+  return [...new Set(entries)].slice(0, 8);
 };
 
-const extractExperienceEntries = (html) => {
-  const doc = parseDocument(html);
-  return extractListFromDocument(doc).slice(0, 8);
-};
-
-const applyProfileHtml = (html, interestsHtml, experienceHtml) => {
+const applyProfileHtml = (html) => {
   const doc = parseDocument(html);
   const descriptionRoot = doc.querySelector(".rm-cv-description");
   const paragraphs = Array.from(descriptionRoot?.querySelectorAll("p") || [])
     .map((node) => cleanText(node.textContent || ""))
     .filter(Boolean);
   const affiliation = findAffiliation(doc);
-  const researchAreas = extractInterestEntries(interestsHtml);
-  const careerHistory = extractExperienceEntries(experienceHtml);
+  const researchAreas = extractEntriesFromProfileSections(html, getAreaSectionTitles());
+  const careerHistory = extractEntriesFromProfileSections(html, getHistorySectionTitles());
+  const summarizedAreas = summarizeAreas(researchAreas);
+  const summarizedHistory = summarizeHistory(careerHistory);
   const interestFallback = researchAreas.length
     ? lang === "en"
       ? `${ui.interestHeading}: ${researchAreas.slice(0, 6).join(", ")} ${ui.interestTail}.`
@@ -397,11 +724,12 @@ const applyProfileHtml = (html, interestsHtml, experienceHtml) => {
     currentFocusBody.textContent = interestFallback;
   }
 
-  renderAutoList(researchAreasList, researchAreas, ui.areasEmpty);
-  renderAutoList(careerHistoryList, careerHistory, ui.historyEmpty);
+  renderAutoList(researchAreasList, summarizedAreas, ui.areasEmpty);
+  renderAutoList(careerHistoryList, summarizedHistory, ui.historyEmpty);
 };
 
 loadProfile();
+loadResearchOutputs();
 
 const xTimelineRoot = document.getElementById("x-timeline");
 
