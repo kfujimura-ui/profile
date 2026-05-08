@@ -1,7 +1,7 @@
 const siteConfig = {
   researchmapApiBase: "https://api.researchmap.jp/fujimurakeiji",
   maxResearchItems: {
-    papers: 3,
+    papers: 4,
     books: 2,
     presentations: 3,
     activities: 2,
@@ -806,86 +806,6 @@ const loadProfile = async () => {
 loadPapers();
 loadProfile();
 loadResearchOutputs();
-
-const xTimelineRoot = document.getElementById("x-timeline");
-const xTimelineUrl = "https://x.com/KeijiFujimura";
-
-const renderXFallback = () => {
-  if (!xTimelineRoot || xTimelineRoot.querySelector("iframe")) return;
-  xTimelineRoot.innerHTML = `
-    <div class="metric">
-      <span class="metric-label">${ui.xFallback}</span>
-      <p><a href="https://x.com/KeijiFujimura" target="_blank" rel="noreferrer">${ui.openX}</a></p>
-    </div>
-  `;
-};
-
-const ensureTwitterScript = () => {
-  const existing = document.querySelector('script[src*="platform.twitter.com/widgets.js"], script[src*="platform.x.com/widgets.js"]');
-  if (existing) return existing;
-
-  const script = document.createElement("script");
-  script.src = "https://platform.twitter.com/widgets.js";
-  script.async = true;
-  script.charset = "utf-8";
-  document.body.appendChild(script);
-  return script;
-};
-
-const renderOEmbedHtml = (html) => {
-  if (!xTimelineRoot) return;
-  xTimelineRoot.innerHTML = html;
-  ensureTwitterScript();
-
-  if (window.twttr?.widgets?.load) {
-    window.twttr.widgets.load(xTimelineRoot);
-    return;
-  }
-
-  window.setTimeout(() => {
-    if (window.twttr?.widgets?.load) {
-      window.twttr.widgets.load(xTimelineRoot);
-    }
-  }, 1200);
-};
-
-const loadXTimeline = async () => {
-  if (!xTimelineRoot) return;
-
-  const endpoint = new URL("https://publish.x.com/oembed");
-  endpoint.searchParams.set("url", xTimelineUrl);
-  endpoint.searchParams.set("omit_script", "1");
-  endpoint.searchParams.set("theme", "light");
-  endpoint.searchParams.set("dnt", "true");
-  endpoint.searchParams.set("maxheight", "620");
-  endpoint.searchParams.set("chrome", "noheader nofooter noborders transparent");
-  endpoint.searchParams.set("lang", lang === "en" ? "en" : "ja");
-
-  try {
-    const response = await fetch(endpoint.toString());
-    if (!response.ok) {
-      throw new Error(`Failed to fetch X oEmbed: ${response.status}`);
-    }
-
-    const data = await response.json();
-    if (!data?.html) {
-      throw new Error("X oEmbed response did not include HTML");
-    }
-
-    renderOEmbedHtml(data.html);
-
-    window.setTimeout(() => {
-      if (!xTimelineRoot.querySelector("iframe")) {
-        renderXFallback();
-      }
-    }, 6500);
-  } catch (error) {
-    console.error(error);
-    renderXFallback();
-  }
-};
-
-window.addEventListener("load", loadXTimeline);
 
 const contactForm = document.getElementById("contact-form");
 const formNote = document.getElementById("form-note");
