@@ -1,6 +1,5 @@
 const siteConfig = {
-  researchmapApi: "https://api.researchmap.jp/fujimurakeiji/published_papers",
-  maxPapers: 6,
+  researchmapApiBase: "https://api.researchmap.jp/fujimurakeiji",
   maxResearchItems: {
     papers: 3,
     books: 2,
@@ -110,7 +109,8 @@ const formatAuthors = (authors) => {
   if (!Array.isArray(authors) || authors.length === 0) return ui.authorsUnavailable;
   return authors
     .slice(0, 4)
-    .map((author) => author.name)
+    .map((author) => (typeof author === "string" ? author : author?.name))
+    .filter(Boolean)
     .join(", ");
 };
 
@@ -167,17 +167,9 @@ const renderPapers = (items) => {
 
 const loadPapers = async () => {
   try {
-    const response = await fetch(siteConfig.researchmapApi, {
-      headers: {
-        Accept: "application/json",
-      },
+    const data = await fetchApiJson("/published_papers", {
+      limit: siteConfig.maxResearchItems.papers,
     });
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch papers: ${response.status}`);
-    }
-
-    const data = await response.json();
     const items = Array.isArray(data.items) ? data.items : [];
 
     renderPapers(items);
@@ -187,20 +179,33 @@ const loadPapers = async () => {
   }
 };
 
-loadPapers();
-
 const heroSummary = document.getElementById("hero-summary");
 const heroAffiliation = document.getElementById("hero-affiliation");
 const profileBody = document.getElementById("profile-body");
 const currentFocusBody = document.getElementById("current-focus-body");
 const researchAreasList = document.getElementById("research-areas-list");
 const careerHistoryList = document.getElementById("career-history-list");
+const heroInterestLabel = document.querySelector(".hero-card p");
+const heroInterestValue = document.querySelector(".hero-card strong");
 const fixedHeroMessage =
-  "English Education, ESP, Active Learning, and Meeting Competency.";
+  lang === "en"
+    ? "English Education, ESP, Active Learning, and Meeting Competency."
+    : "英語教育、ESP、アクティブ・ラーニング、Meeting Competency。";
 
 const buildProfileUrl = (path = "") => {
   const suffix = lang === "en" ? "?lang=en" : "";
   return `https://researchmap.jp/fujimurakeiji${path}${suffix}`;
+};
+
+const buildApiUrl = (path = "", params = {}) => {
+  const url = new URL(`${siteConfig.researchmapApiBase}${path}`);
+  url.searchParams.set("format", "json");
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== "") {
+      url.searchParams.set(key, String(value));
+    }
+  });
+  return url.toString();
 };
 
 const buildProxyCandidates = (url) => [
@@ -217,6 +222,61 @@ const fetchWithTimeout = async (resource, timeoutMs = 7000) => {
   } finally {
     window.clearTimeout(timer);
   }
+};
+
+const fetchApiJson = async (path = "", params = {}) => {
+  const response = await fetchWithTimeout(buildApiUrl(path, params));
+  if (!response.ok) {
+    throw new Error(`Failed to fetch ${path || "profile"}: ${response.status}`);
+  }
+  return response.json();
+};
+
+const getLocalizedText = (value) => {
+  if (!value) return "";
+  if (typeof value === "string") return cleanText(value);
+  if (typeof value !== "object") return "";
+
+  if (lang === "en") {
+    return cleanText(
+      value.en ||
+        value["en-US"] ||
+        value["en-GB"] ||
+        value.ja ||
+        value["ja-Kana"] ||
+        ""
+    );
+  }
+
+  return cleanText(value.ja || value["ja-Kana"] || value.en || "");
+};
+
+const getLocalizedPeople = (value) => {
+  if (!value || typeof value !== "object") return [];
+  const preferred = Array.isArray(value[lang]) ? value[lang] : null;
+  const fallback = Array.isArray(value.ja) ? value.ja : Array.isArray(value.en) ? value.en : [];
+  return (preferred || fallback)
+    .map((person) => cleanText(person?.name || ""))
+    .filter(Boolean);
+};
+
+const formatMonthRange = (fromDate, toDate) => {
+  const openEnded = !toDate || toDate === "9999" || toDate === "9999-12";
+  if (lang === "en") {
+    if (!fromDate) return openEnded ? "Present" : toDate;
+    return `${fromDate} - ${openEnded ? "Present" : toDate}`;
+  }
+  if (!fromDate) return openEnded ? "現在" : toDate;
+  return `${fromDate} - ${openEnded ? "現在" : toDate}`;
+};
+
+const buildAffiliationLabel = (entry) => {
+  const affiliation = getLocalizedText(entry?.affiliation);
+  const job = getLocalizedText(entry?.job);
+  if (lang === "en") {
+    return [job, affiliation].filter(Boolean).join(", ");
+  }
+  return [affiliation, job].filter(Boolean).join(" ");
 };
 
 const fetchTextFromCandidates = async (candidates) => {
@@ -440,50 +500,6 @@ const renderOutputCards = (element, items, emptyText) => {
   });
 };
 
-const summarizeAreas = (items) => {
-  const values = items.filter(Boolean).slice(0, 8);
-  if (!values.length) return [];
-
-  if (lang === "en") {
-    if (values.length <= 3) return values;
-    return [
-      `Core areas: ${values.slice(0, 3).join(", ")}`,
-      `Related themes: ${values.slice(3, 6).join(", ")}`,
-    ].filter(Boolean);
-  }
-
-  if (values.length <= 3) return values;
-  return [
-    `主な領域: ${values.slice(0, 3).join("・")}`,
-    `関連テーマ: ${values.slice(3, 6).join("・")}`,
-  ].filter(Boolean);
-};
-
-const summarizeHistory = (items) => {
-  const values = items.filter(Boolean).slice(0, 6);
-  if (!values.length) return [];
-
-  if (lang === "en") {
-    return values.slice(0, 4).map((value) =>
-      value.length > 110 ? `${value.slice(0, 107).trim()}...` : value
-    );
-  }
-
-  return values.slice(0, 4).map((value) =>
-    value.length > 64 ? `${value.slice(0, 61).trim()}...` : value
-  );
-};
-
-const extractHistoryEntries = (sectionHtml) => {
-  if (!sectionHtml) return [];
-  const fragment = document.createElement("div");
-  fragment.innerHTML = sectionHtml;
-  const titles = Array.from(
-    fragment.querySelectorAll("a.rm-cv-list-title, .rm-cv-list-title")
-  ).map((node) => cleanText(node.textContent || ""));
-  return [...new Set(titles)].slice(0, 6);
-};
-
 const buildMarketableSummary = ({ affiliation, intro, focus, interests }) => {
   const focusParts = interests.slice(0, 4);
   if (lang === "en") {
@@ -616,45 +632,146 @@ const extractOutputEntriesFromSection = (sectionHtml, maxItems, fallbackUrl) => 
         .filter((text) => text && text !== title && !isNoiseText(text));
 
       return {
-        title,
-        meta: metaCandidates[0] || "",
-        url,
-      };
-    })
+      title,
+      meta: metaCandidates[0] || "",
+      url,
+    };
+  })
     .filter(Boolean);
 
   return items.slice(0, maxItems);
 };
 
+const buildResearchAreaItems = (areaItems, interestItems) => {
+  const values = [
+    ...areaItems.map(
+      (item) =>
+        getLocalizedText(item.research_keyword) ||
+        getLocalizedText(item.research_field) ||
+        getLocalizedText(item.discipline)
+    ),
+    ...interestItems.map((item) => getLocalizedText(item.keyword)),
+  ]
+    .map(cleanText)
+    .filter(Boolean);
+
+  return [...new Set(values)].slice(0, 6);
+};
+
+const buildCareerItems = (items) =>
+  items
+    .map((item) => {
+      const period = formatMonthRange(item.from_date, item.to_date);
+      const affiliation = getLocalizedText(item.affiliation);
+      const section = getLocalizedText(item.section);
+      const job = getLocalizedText(item.job);
+      const parts = lang === "en" ? [affiliation, section, job] : [affiliation, section, job];
+      return [period, ...parts.filter(Boolean)].join(" ");
+    })
+    .filter(Boolean)
+    .slice(0, 4);
+
+const pickResearchmapUrl = (item, fallbackPath = "") => {
+  const external = Array.isArray(item?.see_also)
+    ? item.see_also.find((link) => link?.label === "url" || link?.is_downloadable)
+    : null;
+  return external?.["@id"] || item?.["@id"] || buildProfileUrl(fallbackPath);
+};
+
+const buildOutputEntry = (item, kind) => {
+  const date = cleanText(item?.publication_date || item?.from_date || "");
+  if (kind === "books") {
+    return {
+      title: getLocalizedText(item.book_title) || ui.untitled,
+      meta: [date, getLocalizedText(item.publisher), formatAuthors(getLocalizedPeople(item.authors))]
+        .filter(Boolean)
+        .join(" / "),
+      url: pickResearchmapUrl(item, "/books_etc"),
+    };
+  }
+
+  if (kind === "presentations") {
+    return {
+      title: getLocalizedText(item.presentation_title) || ui.untitled,
+      meta: [date, getLocalizedText(item.event)].filter(Boolean).join(" / "),
+      url: pickResearchmapUrl(item, "/presentations"),
+    };
+  }
+
+  return {
+    title: getLocalizedText(item.paper_title) || ui.untitled,
+    meta: [date, getLocalizedText(item.description)].filter(Boolean).join(" / "),
+    url: pickResearchmapUrl(item, "/misc"),
+  };
+};
+
+const applyProfileData = (profileData, areaItems, interestItems, experienceItems) => {
+  const profileText = profileData?.profile || {};
+  const affiliationEntry = Array.isArray(profileData?.affiliations)
+    ? profileData.affiliations[0]
+    : null;
+  const affiliationLabel = buildAffiliationLabel(affiliationEntry);
+  const introHtml = lang === "en" ? profileText.en : profileText.ja || profileText.en;
+  const introDoc = parseDocument(`<div>${introHtml || ""}</div>`);
+  const paragraphs = Array.from(introDoc.querySelectorAll("p"))
+    .map((node) => cleanText(node.textContent || ""))
+    .filter(Boolean);
+  const researchAreaItems = buildResearchAreaItems(areaItems, interestItems);
+  const interestValues = interestItems
+    .map((item) => getLocalizedText(item.keyword))
+    .filter(Boolean)
+    .slice(0, 4);
+  const sellableSummary = buildMarketableSummary({
+    affiliation: affiliationLabel,
+    intro: paragraphs[0] || "",
+    focus: paragraphs[1] || paragraphs[0] || "",
+    interests: researchAreaItems,
+  });
+
+  if (profileBody && sellableSummary) {
+    profileBody.textContent = sellableSummary;
+  }
+  if (heroSummary) {
+    heroSummary.textContent = fixedHeroMessage;
+  }
+  if (heroAffiliation && affiliationLabel) {
+    heroAffiliation.textContent = affiliationLabel;
+  }
+  if (currentFocusBody) {
+    currentFocusBody.textContent = paragraphs[1] || paragraphs[0] || currentFocusBody.textContent;
+  }
+  if (heroInterestLabel) {
+    heroInterestLabel.textContent = lang === "en" ? "Research Interests" : "研究テーマ";
+  }
+  if (heroInterestValue && interestValues.length) {
+    heroInterestValue.textContent = interestValues.join(" / ");
+  }
+
+  renderAutoList(researchAreasList, researchAreaItems, ui.areasEmpty);
+  renderAutoList(careerHistoryList, buildCareerItems(experienceItems), ui.historyEmpty);
+};
+
 const loadResearchOutputs = async () => {
   try {
-    const profileHtml = await fetchTextFromCandidates(buildProxyCandidates(buildProfileUrl()));
+    const [booksData, presentationsData, activitiesData] = await Promise.all([
+      fetchApiJson("/books_etc", { limit: siteConfig.maxResearchItems.books }),
+      fetchApiJson("/presentations", { limit: siteConfig.maxResearchItems.presentations }),
+      fetchApiJson("/misc", { limit: siteConfig.maxResearchItems.activities }),
+    ]);
 
     renderOutputCards(
       booksList,
-      extractOutputEntriesFromSection(
-        extractSectionHtml(profileHtml, getBooksSectionTitles()),
-        siteConfig.maxResearchItems.books,
-        buildProfileUrl("/books_etc")
-      ),
+      (booksData.items || []).map((item) => buildOutputEntry(item, "books")),
       ui.booksEmpty
     );
     renderOutputCards(
       presentationsList,
-      extractOutputEntriesFromSection(
-        extractSectionHtml(profileHtml, getPresentationsSectionTitles()),
-        siteConfig.maxResearchItems.presentations,
-        buildProfileUrl("/presentations")
-      ),
+      (presentationsData.items || []).map((item) => buildOutputEntry(item, "presentations")),
       ui.presentationsEmpty
     );
     renderOutputCards(
       activitiesList,
-      extractOutputEntriesFromSection(
-        extractSectionHtml(profileHtml, getActivitiesSectionTitles()),
-        siteConfig.maxResearchItems.activities,
-        buildProfileUrl("/misc")
-      ),
+      (activitiesData.items || []).map((item) => buildOutputEntry(item, "activities")),
       ui.activitiesEmpty
     );
   } catch (error) {
@@ -667,8 +784,18 @@ const loadResearchOutputs = async () => {
 
 const loadProfile = async () => {
   try {
-    const profileHtml = await fetchTextFromCandidates(buildProxyCandidates(buildProfileUrl()));
-    applyProfileHtml(profileHtml);
+    const [profileData, areasData, interestsData, experienceData] = await Promise.all([
+      fetchApiJson("", { limit: 1000 }),
+      fetchApiJson("/research_areas", { limit: 1000 }),
+      fetchApiJson("/research_interests", { limit: 1000 }),
+      fetchApiJson("/research_experience", { limit: 1000 }),
+    ]);
+    applyProfileData(
+      profileData,
+      Array.isArray(areasData.items) ? areasData.items : [],
+      Array.isArray(interestsData.items) ? interestsData.items : [],
+      Array.isArray(experienceData.items) ? experienceData.items : []
+    );
   } catch (error) {
     console.error(error);
     renderAutoList(researchAreasList, [], ui.areasEmpty);
@@ -676,65 +803,14 @@ const loadProfile = async () => {
   }
 };
 
-const extractEntriesFromProfileSections = (html, sectionTitles) => {
-  const entries = sectionTitles.flatMap((title) =>
-    extractTextListFromSection(extractSectionHtml(html, [title]))
-  );
-  return [...new Set(entries)].slice(0, 8);
-};
-
-const applyProfileHtml = (html) => {
-  const doc = parseDocument(html);
-  const descriptionRoot = doc.querySelector(".rm-cv-description");
-  const paragraphs = Array.from(descriptionRoot?.querySelectorAll("p") || [])
-    .map((node) => cleanText(node.textContent || ""))
-    .filter(Boolean);
-  const affiliation = findAffiliation(doc);
-  const researchAreas = extractEntriesFromProfileSections(html, getAreaSectionTitles());
-  const careerHistory = extractEntriesFromProfileSections(html, getHistorySectionTitles());
-  const summarizedAreas = summarizeAreas(researchAreas);
-  const summarizedHistory = summarizeHistory(careerHistory);
-  const interestFallback = researchAreas.length
-    ? lang === "en"
-      ? `${ui.interestHeading}: ${researchAreas.slice(0, 6).join(", ")} ${ui.interestTail}.`
-      : `${ui.interestHeading}: ${researchAreas.slice(0, 6).join("、")}${ui.interestTail}。`
-    : extractResearchInterestFallback(html);
-  const sellableSummary = buildMarketableSummary({
-    affiliation,
-    intro: paragraphs[0] || "",
-    focus: paragraphs[1] || interestFallback,
-    interests: researchAreas,
-  });
-
-  if (sellableSummary) {
-    profileBody.textContent = sellableSummary;
-  }
-
-  if (heroSummary) {
-    heroSummary.textContent = fixedHeroMessage;
-  }
-
-  if (affiliation) {
-    heroAffiliation.textContent = affiliation;
-  }
-
-  if (paragraphs[1]) {
-    currentFocusBody.textContent = paragraphs[1];
-  } else if (interestFallback) {
-    currentFocusBody.textContent = interestFallback;
-  }
-
-  renderAutoList(researchAreasList, summarizedAreas, ui.areasEmpty);
-  renderAutoList(careerHistoryList, summarizedHistory, ui.historyEmpty);
-};
-
+loadPapers();
 loadProfile();
 loadResearchOutputs();
 
 const xTimelineRoot = document.getElementById("x-timeline");
 
 const renderXFallback = () => {
-  if (!xTimelineRoot) return;
+  if (!xTimelineRoot || xTimelineRoot.querySelector("iframe")) return;
   xTimelineRoot.innerHTML = `
     <div class="metric">
       <span class="metric-label">${ui.xFallback}</span>
@@ -743,66 +819,17 @@ const renderXFallback = () => {
   `;
 };
 
-const ensureTwitterScript = () => {
-  const existing = document.querySelector('script[src="https://platform.twitter.com/widgets.js"]');
-  if (existing) {
-    return existing;
-  }
-
-  const script = document.createElement("script");
-  script.src = "https://platform.twitter.com/widgets.js";
-  script.async = true;
-  script.charset = "utf-8";
-  document.body.appendChild(script);
-  return script;
-};
-
-const createTimeline = () => {
-  if (!xTimelineRoot || !window.twttr?.widgets?.createTimeline) return false;
-  xTimelineRoot.innerHTML = "";
-  window.twttr.widgets
-    .createTimeline(
-      {
-        sourceType: "profile",
-        screenName: "KeijiFujimura",
-      },
-      xTimelineRoot,
-      {
-        theme: "light",
-        chrome: "noheader nofooter noborders transparent",
-        height: 620,
-        dnt: true,
-      }
-    )
-    .then((result) => {
-      if (!result) {
-        renderXFallback();
-      }
-    })
-    .catch(renderXFallback);
-  return true;
-};
-
-const mountXTimeline = () => {
+const watchXTimeline = () => {
   if (!xTimelineRoot) return;
-  ensureTwitterScript();
 
-  let attempts = 0;
-  const timer = window.setInterval(() => {
-    attempts += 1;
-    if (createTimeline()) {
-      window.clearInterval(timer);
-      return;
-    }
-
-    if (attempts >= 30) {
-      window.clearInterval(timer);
+  window.setTimeout(() => {
+    if (!xTimelineRoot.querySelector("iframe")) {
       renderXFallback();
     }
-  }, 500);
+  }, 6500);
 };
 
-window.addEventListener("load", mountXTimeline);
+window.addEventListener("load", watchXTimeline);
 
 const contactForm = document.getElementById("contact-form");
 const formNote = document.getElementById("form-note");
