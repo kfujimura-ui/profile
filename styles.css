@@ -163,17 +163,28 @@ a {
   margin: 0;
   font-family: var(--font-display);
   font-weight: 600;
-  line-height: 0.96;
+  line-height: 1.02;
   letter-spacing: -0.02em;
 }
 
 .hero h1 {
-  font-size: clamp(4.2rem, 11vw, 8.8rem);
+  font-size: clamp(3.9rem, 9.8vw, 8rem);
 }
 
 .hero h1 span {
   display: block;
   color: rgba(30, 26, 22, 0.78);
+}
+
+.hero-name {
+  line-height: 0.94;
+}
+
+.hero-name-ja {
+  display: block;
+  font-family: "Noto Serif JP", serif;
+  font-size: clamp(3.6rem, 8vw, 6.4rem);
+  letter-spacing: 0.02em;
 }
 
 .hero-lead,
@@ -381,6 +392,14 @@ a {
   line-height: 0.98;
 }
 
+.achievements .section-heading {
+  max-width: 52rem;
+}
+
+.achievements .section-heading h2 {
+  font-size: clamp(2.4rem, 5.2vw, 4.4rem);
+}
+
 .grid.three {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -395,7 +414,9 @@ a {
 
 .panel h3,
 .price-card h3,
-.papers-grid h3 {
+.papers-grid h3,
+.research-group h3,
+.output-card h3 {
   margin-top: 0;
   margin-bottom: 0.8rem;
 }
@@ -431,6 +452,52 @@ a {
   line-height: 1.7;
 }
 
+.research-groups {
+  display: grid;
+  gap: 1rem;
+}
+
+.research-group {
+  padding: 1.6rem;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 12px 40px rgba(48, 38, 27, 0.05);
+}
+
+.research-group > h3 {
+  margin-bottom: 1rem;
+}
+
+.outputs-list {
+  display: grid;
+  gap: 1rem;
+}
+
+.output-card {
+  padding: 1.2rem 1.25rem;
+  background: rgba(255, 255, 255, 0.62);
+  border: 1px solid var(--line);
+  border-radius: 1.4rem;
+}
+
+.output-card h3 {
+  font-size: 1.1rem;
+  line-height: 1.35;
+}
+
+.output-card p {
+  margin: 0.35rem 0 0;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.output-loading {
+  margin: 0;
+  color: var(--muted);
+}
+
 .social-layout {
   display: grid;
   grid-template-columns: 0.75fr 1.25fr;
@@ -447,14 +514,20 @@ a {
 
 .x-embed {
   min-height: 12rem;
-  padding: 1rem;
+  padding: 0.85rem;
   border-radius: var(--radius);
   background: rgba(255, 255, 255, 0.45);
   border: 1px solid var(--line);
+  overflow: hidden;
 }
 
 .x-timeline-shell {
   min-height: 620px;
+}
+
+.x-timeline-shell .twitter-timeline {
+  border-radius: 1.4rem;
+  overflow: hidden;
 }
 
 .price-card.featured {
