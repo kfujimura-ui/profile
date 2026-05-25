@@ -141,7 +141,7 @@ const makePaperCard = (paper) => {
   const journal =
     paper.publication_name?.en || paper.publication_name?.ja || ui.journalUnavailable;
   const date = formatDate(paper.publication_date);
-  const url = paper.see_also?.[0]?.["@id"] || paper["@id"];
+  const url = normalizeResearchmapItemUrl(paper?.["@id"], "/published_papers");
   const peerReviewed = paper.referee ? ui.peerReviewed : ui.publicRecord;
 
   article.innerHTML = `
@@ -195,6 +195,32 @@ const fixedHeroMessage =
 const buildProfileUrl = (path = "") => {
   const suffix = lang === "en" ? "?lang=en" : "";
   return `https://researchmap.jp/fujimurakeiji${path}${suffix}`;
+};
+
+const normalizeResearchmapItemUrl = (rawUrl, fallbackPath = "") => {
+  if (!rawUrl) return buildProfileUrl(fallbackPath);
+
+  const pattern = /^\/(?:fujimurakeiji\/)?(published_papers|books_etc|presentations|misc)\/[^/]+$/;
+
+  try {
+    const parsed = new URL(rawUrl);
+    const pathname = parsed.pathname || "";
+    if (pattern.test(pathname)) {
+      const normalizedPath = pathname.startsWith("/fujimurakeiji/")
+        ? pathname.slice("/fujimurakeiji".length)
+        : pathname;
+      return buildProfileUrl(normalizedPath);
+    }
+  } catch (_error) {
+    if (pattern.test(rawUrl)) {
+      const normalizedPath = rawUrl.startsWith("/fujimurakeiji/")
+        ? rawUrl.slice("/fujimurakeiji".length)
+        : rawUrl;
+      return buildProfileUrl(normalizedPath);
+    }
+  }
+
+  return buildProfileUrl(fallbackPath);
 };
 
 const buildApiUrl = (path = "", params = {}) => {
@@ -672,10 +698,7 @@ const buildCareerItems = (items) =>
     .slice(0, 4);
 
 const pickResearchmapUrl = (item, fallbackPath = "") => {
-  const external = Array.isArray(item?.see_also)
-    ? item.see_also.find((link) => link?.label === "url" || link?.is_downloadable)
-    : null;
-  return external?.["@id"] || item?.["@id"] || buildProfileUrl(fallbackPath);
+  return normalizeResearchmapItemUrl(item?.["@id"], fallbackPath);
 };
 
 const buildOutputEntry = (item, kind) => {

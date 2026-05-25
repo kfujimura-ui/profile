@@ -156,6 +156,16 @@ a {
   text-transform: uppercase;
 }
 
+.lang-en .eyebrow {
+  font-size: 1.04rem;
+  letter-spacing: 0.18em;
+}
+
+.lang-ja .eyebrow {
+  font-size: 1.04rem;
+  letter-spacing: 0.18em;
+}
+
 .hero h1,
 .section-heading h2,
 .story-block h2,
