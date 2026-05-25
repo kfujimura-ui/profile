@@ -134,6 +134,29 @@ const getPaperTitle = (paper) => {
   return paper.paper_title?.en || paper.paper_title?.ja || ui.untitled;
 };
 
+const hasJapaneseText = (value) =>
+  /[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff]/.test(value || "");
+
+const getResearchmapLangFromTitle = (title) => (hasJapaneseText(title) ? "ja" : "en");
+
+const getResearchmapLangForItem = (item, candidateValues = []) => {
+  const values = [item?.paper_title, item?.book_title, item?.presentation_title, ...candidateValues];
+
+  for (const value of values) {
+    if (!value) continue;
+    if (typeof value === "object") {
+      if (hasJapaneseText(value.ja || value["ja-Kana"] || "")) return "ja";
+      if ((value.en || value["en-US"] || value["en-GB"]) && !hasJapaneseText(value.en || value["en-US"] || value["en-GB"])) {
+        return "en";
+      }
+    } else if (hasJapaneseText(String(value))) {
+      return "ja";
+    }
+  }
+
+  return getResearchmapLangFromTitle(candidateValues[0] || "");
+};
+
 const makePaperCard = (paper) => {
   const article = document.createElement("article");
   const title = getPaperTitle(paper);
@@ -141,7 +164,11 @@ const makePaperCard = (paper) => {
   const journal =
     paper.publication_name?.en || paper.publication_name?.ja || ui.journalUnavailable;
   const date = formatDate(paper.publication_date);
-  const url = normalizeResearchmapItemUrl(paper?.["@id"], "/published_papers");
+  const url = normalizeResearchmapItemUrl(
+    paper?.["@id"],
+    "/published_papers",
+    getResearchmapLangForItem(paper, [title])
+  );
   const peerReviewed = paper.referee ? ui.peerReviewed : ui.publicRecord;
 
   article.innerHTML = `
@@ -192,13 +219,13 @@ const fixedHeroMessage =
     ? "English Education, ESP, Active Learning, and Meeting Competency."
     : "英語教育、ESP、アクティブ・ラーニング、Meeting Competency。";
 
-const buildProfileUrl = (path = "") => {
-  const suffix = lang === "en" ? "?lang=en" : "";
+const buildProfileUrl = (path = "", targetLang = lang) => {
+  const suffix = targetLang === "en" ? "?lang=en" : "?lang=ja";
   return `https://researchmap.jp/fujimurakeiji${path}${suffix}`;
 };
 
-const normalizeResearchmapItemUrl = (rawUrl, fallbackPath = "") => {
-  if (!rawUrl) return buildProfileUrl(fallbackPath);
+const normalizeResearchmapItemUrl = (rawUrl, fallbackPath = "", targetLang = lang) => {
+  if (!rawUrl) return buildProfileUrl(fallbackPath, targetLang);
 
   const pattern = /^\/(?:fujimurakeiji\/)?(published_papers|books_etc|presentations|misc)\/[^/]+$/;
 
@@ -209,18 +236,18 @@ const normalizeResearchmapItemUrl = (rawUrl, fallbackPath = "") => {
       const normalizedPath = pathname.startsWith("/fujimurakeiji/")
         ? pathname.slice("/fujimurakeiji".length)
         : pathname;
-      return buildProfileUrl(normalizedPath);
+      return buildProfileUrl(normalizedPath, targetLang);
     }
   } catch (_error) {
     if (pattern.test(rawUrl)) {
       const normalizedPath = rawUrl.startsWith("/fujimurakeiji/")
         ? rawUrl.slice("/fujimurakeiji".length)
         : rawUrl;
-      return buildProfileUrl(normalizedPath);
+      return buildProfileUrl(normalizedPath, targetLang);
     }
   }
 
-  return buildProfileUrl(fallbackPath);
+  return buildProfileUrl(fallbackPath, targetLang);
 };
 
 const buildApiUrl = (path = "", params = {}) => {
@@ -697,34 +724,41 @@ const buildCareerItems = (items) =>
     .filter(Boolean)
     .slice(0, 4);
 
-const pickResearchmapUrl = (item, fallbackPath = "") => {
-  return normalizeResearchmapItemUrl(item?.["@id"], fallbackPath);
+const pickResearchmapUrl = (item, fallbackPath = "", title = "") => {
+  return normalizeResearchmapItemUrl(
+    item?.["@id"],
+    fallbackPath,
+    getResearchmapLangForItem(item, [title])
+  );
 };
 
 const buildOutputEntry = (item, kind) => {
   const date = cleanText(item?.publication_date || item?.from_date || "");
   if (kind === "books") {
+    const title = getLocalizedText(item.book_title) || ui.untitled;
     return {
-      title: getLocalizedText(item.book_title) || ui.untitled,
+      title,
       meta: [date, getLocalizedText(item.publisher), formatAuthors(getLocalizedPeople(item.authors))]
         .filter(Boolean)
         .join(" / "),
-      url: pickResearchmapUrl(item, "/books_etc"),
+      url: pickResearchmapUrl(item, "/books_etc", title),
     };
   }
 
   if (kind === "presentations") {
+    const title = getLocalizedText(item.presentation_title) || ui.untitled;
     return {
-      title: getLocalizedText(item.presentation_title) || ui.untitled,
+      title,
       meta: [date, getLocalizedText(item.event)].filter(Boolean).join(" / "),
-      url: pickResearchmapUrl(item, "/presentations"),
+      url: pickResearchmapUrl(item, "/presentations", title),
     };
   }
 
+  const title = getLocalizedText(item.paper_title) || ui.untitled;
   return {
-    title: getLocalizedText(item.paper_title) || ui.untitled,
+    title,
     meta: [date, getLocalizedText(item.description)].filter(Boolean).join(" / "),
-    url: pickResearchmapUrl(item, "/misc"),
+    url: pickResearchmapUrl(item, "/misc", title),
   };
 };
 
