@@ -505,16 +505,16 @@ const buildMarketableSummary = ({ affiliation, intro, focus, interests }) => {
   if (lang === "en") {
     const affiliationPart = affiliation ? `${affiliation}. ` : "";
     const interestPart = focusParts.length
-      ? `Key themes include ${focusParts.join(", ")}. `
+      ? `Working across ${focusParts.join(", ")}, `
       : "";
-    return `${affiliationPart}A researcher and practitioner connecting university English education, curriculum design, and global talent development. ${interestPart}${focus || intro}`;
+    return `${affiliationPart}${interestPart}a researcher and practitioner connecting university English education, curriculum design, and global talent development.`;
   }
 
   const affiliationPart = affiliation ? `${affiliation}。` : "";
   const interestPart = focusParts.length
     ? `${focusParts.join("・")}を軸に、`
     : "";
-  return `${affiliationPart}${interestPart}大学英語教育、カリキュラム設計、グローバル人材育成をつなぐ研究者・実践者。${focus || intro}`;
+  return `${affiliationPart}${interestPart}大学英語教育、カリキュラム設計、グローバル人材育成をつなぐ研究者・実践者。`;
 };
 
 const getAreaSectionTitles = () =>
